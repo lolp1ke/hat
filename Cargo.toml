@@ -1,0 +1,148 @@
+[package]
+name = "hat"
+
+authors.workspace = true
+
+edition.workspace = true
+version.workspace = true
+
+description.workspace = true
+# keywords.workspace = true
+# categories.workspace = true
+
+# homepage.workspace = true
+repository.workspace = true
+# documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+
+# include.workspace = true
+# exclude.workspace = true
+
+rust-version.workspace = true
+
+[[bin]]
+name = "hat"
+required-features = ["default"]
+
+[features]
+default = [
+  "clap",
+  "tokio",
+  "ratatui",
+  "crossterm",
+  "derive_more",
+  "toml",
+  "serde",
+  "tracing",
+  "libp2p",
+  "taffy",
+]
+
+clap = ["clap/std", "clap/derive", "clap/help"]
+crossterm = ["crossterm/event-stream"]
+derive_more = [
+  "derive_more/deref",
+  "derive_more/deref_mut",
+  "derive_more/debug",
+  "derive_more/display",
+]
+libp2p = [
+  "libp2p/macros",
+  "libp2p/mdns",
+  "libp2p/tokio",
+  "libp2p/gossipsub",
+  "libp2p/tcp",
+  "libp2p/noise",
+  "libp2p/yamux",
+]
+ratatui = ["ratatui/crossterm"]
+serde = ["serde/derive", "serde/std"]
+taffy = []
+tokio = ["tokio/rt-multi-thread", "tokio/macros", "tokio/time", "tokio/sync"]
+toml = ["toml/serde", "toml/parse"]
+tracing = ["tracing-subscriber/fmt"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+async-task = { workspace = true }
+base64 = { workspace = true }
+bitflags = { workspace = true }
+clap = { workspace = true }
+crossterm = { workspace = true }
+derive_more = { workspace = true }
+futures-util = { workspace = true }
+inventory = { workspace = true }
+libp2p = { workspace = true }
+parking_lot = { workspace = true }
+ratatui = { workspace = true }
+serde = { workspace = true }
+slotmap = { workspace = true }
+smallvec = { workspace = true }
+taffy = { workspace = true }
+time-format = { workspace = true }
+tokio = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[workspace]
+members = []
+resolver = "3"
+
+[workspace.dependencies]
+anyhow = { version = "1.0.102", default-features = false }
+async-task = { version = "4.7.1", default-features = false }
+base64 = { version = "0.22.1", default-features = false }
+bitflags = { version = "2.11.1", default-features = false }
+clap = { version = "4.6.0", default-features = false }
+crossterm = { version = "0.29.0", default-features = false }
+derive_more = { version = "2.1.1", default-features = false }
+futures-util = { version = "0.3.32", default-features = false }
+inventory = { version = "0.3.24", default-features = false }
+libp2p = { version = "0.56.0", default-features = false }
+parking_lot = { version = "0.12.5", default-features = false }
+ratatui = { version = "0.30.0", default-features = false }
+serde = { version = "1.0.228", default-features = false }
+slotmap = { version = "1.1.1", default-features = false }
+smallvec = { version = "1.15.1", default-features = false }
+taffy = { version = "0.10.1" }
+time-format = { version = "1.2.2", default-features = false }
+tokio = { version = "1.52.1", default-features = false }
+toml = { version = "1.1.2", default-features = false }
+tracing = { version = "0.1.44", default-features = false }
+tracing-subscriber = { version = "0.3.23", default-features = false }
+
+[workspace.package]
+authors = ["Alibek<freed.alibek@gmail.com>"]
+
+edition = "2024"
+version = "0.1.0"
+
+description = ""
+# keywords = []
+# categories = []
+
+# homepage = ""
+repository = "https://github.com/lolp1ke/qara"
+# documentation = ""
+readme = "README.md"
+license-file = "LICENSE-APACHE"
+
+# include = []
+# exclude = []
+
+rust-version = "1.94.0"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[workspace.lints.clippy]
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"

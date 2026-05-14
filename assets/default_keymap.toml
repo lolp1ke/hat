@@ -1,0 +1,15 @@
+[[keybindings]]
+[keybindings.bindings]
+"ctrl-q" = "Quit"
+
+[[keybindings]]
+context = "input"
+[keybindings.bindings]
+"left" = "CursorLeft"
+"right" = "CursorRight"
+"up" = "CursorUp"
+"down" = "CursorDown"
+"delete" = "DeleteAtCursorPos"
+"shift-return" = "InsertNewLineAtCursorPos"
+"space" = "InsertSpaceAtCursorPos"
+"return" = "SendMessage"
