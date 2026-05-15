@@ -1,0 +1,3 @@
+[submodule "qalam"]
+	path = qalam
+	url = https://codeberg.org/lolp1ke/qalam.git

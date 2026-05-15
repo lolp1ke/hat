@@ -141,7 +141,7 @@ impl InputMessage {
     cx: &mut Context<Self>,
   ) {
     cx.emit(InputEvent::Submit {
-      data: self.message.join("\n").into_bytes(),
+      data: self.message.join("\r\n").into_bytes(),
     });
 
     self.message.clear();

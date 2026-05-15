@@ -215,12 +215,13 @@ impl Hat {
           } => {
             tracing::debug!("from id: {}; message: {:?}", message_id, message);
 
-            let text =
-              String::from_utf8(message.data).unwrap_or_default().into();
+            let text = String::from_utf8(message.data).unwrap_or_default();
+            let text = text.lines().map(Into::into).collect();
+
             cx.update_entity(chat, |_, cx| {
               cx.emit(ChatEvent::NewMessage {
-                topic: cx.global::<CurrentTopic>().clone().0,
-                message: [text].into(),
+                topic: message.topic,
+                message: text,
               });
             });
           }

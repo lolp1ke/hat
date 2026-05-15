@@ -1,11 +1,13 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
+use libp2p::{PeerId, gossipsub::TopicHash};
 use ratatui::{
   Frame,
   layout::Rect,
   text::Text,
   widgets::{Block, Borders, Paragraph},
 };
+use uuid::Uuid;
 
 use crate::{
   app::{Context, EventEmitter, Interactive, Render, Window},
@@ -59,7 +61,15 @@ impl EventEmitter<InputEvent> for Chat {}
 #[derive(Debug)]
 pub enum ChatEvent {
   NewMessage {
-    topic: Arc<str>,
+    topic: TopicHash,
     message: Arc<[Arc<str>]>,
   },
+}
+
+#[derive(Debug)]
+pub struct Message {
+  id: Uuid,
+  content: Arc<[Arc<str>]>,
+  from: PeerId,
+  timestamp: Instant,
 }
