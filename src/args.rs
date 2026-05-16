@@ -3,7 +3,7 @@ use std::sync::Arc;
 #[derive(clap::Parser)]
 #[command(
   version,
-  about = "Awesome temporary p2p chat with musical accompaniment"
+  about = "awesome temporary p2p chat with musical accompaniment"
 )]
 pub struct Args {
   #[clap()]

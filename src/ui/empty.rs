@@ -1,10 +1,13 @@
-use ratatui::{
-  Frame,
-  layout::Rect,
-  widgets::{Block, Borders},
+use dene::{
+  Context,
+  ratatui::{
+    Frame,
+    layout::Rect,
+    widgets::{Block, Borders},
+  },
+  view::{Interactive, Render},
+  window::Window,
 };
-
-use crate::app::{Context, Interactive, Render, Window};
 
 pub struct Empty;
 impl Render for Empty {

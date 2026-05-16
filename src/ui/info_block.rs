@@ -1,17 +1,19 @@
 use std::sync::Arc;
 
-use ratatui::{
-  Frame,
-  layout::Rect,
-  text::{Line, Text},
-  widgets::{Block, Borders, Paragraph},
+use dene::{
+  Context,
+  ratatui::{
+    Frame,
+    layout::Rect,
+    text::{Line, Text},
+    widgets::{Block, Borders, Paragraph},
+  },
+  view::{Interactive, Render},
+  window::Window,
 };
 use time_format::strftime_local;
 
-use crate::{
-  app::{Context, Interactive, Render, Window},
-  state::CurrentPersona,
-};
+use crate::state::CurrentPersona;
 
 #[derive(Debug)]
 pub struct InfoBlock {

@@ -1,16 +1,17 @@
 use std::time::{Duration, Instant};
 
-use ratatui::{
-  Frame,
-  layout::Rect,
-  text::{Line, Text},
-  widgets::{Block, Borders, Clear, Paragraph},
-};
-
-use crate::{
-  actions,
-  app::{Context, EventEmitter, Interactive, Keystroke, Render, Window},
-  ui::ChatEvent,
+use dene::{
+  Context, actions,
+  event::EventEmitter,
+  keybind::Keystroke,
+  ratatui::{
+    Frame,
+    layout::Rect,
+    text::{Line, Text},
+    widgets::{Block, Borders, Clear, Paragraph},
+  },
+  view::{Interactive, Render},
+  window::Window,
 };
 
 const CURSOR_BLINK_RATE: Duration = Duration::from_millis(500);
@@ -75,7 +76,6 @@ impl InputMessage {
     self.cursor_pos.1 += 1;
     let (_, y) = self.fix_cursor_pos();
     self.cursor_pos.1 = y;
-    // self.cursor_pos = self.fix_cursor_pos();
   }
   fn delete_at_cursor_pos(
     &mut self,
@@ -229,7 +229,6 @@ impl Interactive for InputMessage {
   }
 }
 impl EventEmitter<InputEvent> for InputMessage {}
-impl EventEmitter<ChatEvent> for InputMessage {}
 
 #[derive(Debug)]
 pub enum InputEvent {

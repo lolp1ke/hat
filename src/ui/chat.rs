@@ -1,18 +1,19 @@
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 
-use libp2p::{PeerId, gossipsub::TopicHash};
-use ratatui::{
-  Frame,
-  layout::Rect,
-  text::Text,
-  widgets::{Block, Borders, Paragraph},
+use dene::{
+  Context,
+  event::EventEmitter,
+  ratatui::{
+    Frame,
+    layout::Rect,
+    text::Text,
+    widgets::{Block, Borders, Paragraph},
+  },
+  view::{Interactive, Render},
+  window::Window,
 };
-use uuid::Uuid;
 
-use crate::{
-  app::{Context, EventEmitter, Interactive, Render, Window},
-  ui::InputEvent,
-};
+use crate::ui::InputEvent;
 
 #[derive(Debug)]
 pub struct Chat {
@@ -20,15 +21,16 @@ pub struct Chat {
 }
 impl Chat {
   pub fn new(_: &mut Window, cx: &mut Context<Self>) -> Self {
-    cx.subscribe(cx.entity(), |chat, event, cx| {
-      chat.update(cx, |chat, _| {
-        match event {
-          ChatEvent::NewMessage { topic: _, message } => {
-            chat.messages.push(message.clone());
-          }
-        };
-      });
-    });
+    // let e = cx.entity();
+    // cx.subscribe(e, |chat, event, cx| {
+    //   chat.update(cx, |chat, _| {
+    //     match event {
+    //       ChatEvent::NewMessage { topic: _, message } => {
+    //         chat.messages.push(message.clone());
+    //       }
+    //     };
+    //   });
+    // });
 
     Self {
       messages: Vec::default(),
@@ -55,21 +57,21 @@ impl Render for Chat {
   }
 }
 impl Interactive for Chat {}
-impl EventEmitter<ChatEvent> for Chat {}
+// impl EventEmitter<ChatEvent> for Chat {}
 impl EventEmitter<InputEvent> for Chat {}
 
-#[derive(Debug)]
-pub enum ChatEvent {
-  NewMessage {
-    topic: TopicHash,
-    message: Arc<[Arc<str>]>,
-  },
-}
+// #[derive(Debug)]
+// pub enum ChatEvent {
+//   NewMessage {
+// topic: TopicHash,
+//     message: Arc<[Arc<str>]>,
+//   },
+// }
 
-#[derive(Debug)]
-pub struct Message {
-  id: Uuid,
-  content: Arc<[Arc<str>]>,
-  from: PeerId,
-  timestamp: Instant,
-}
+// #[derive(Debug)]
+// pub struct Message {
+//   id: Uuid,
+//   content: Arc<[Arc<str>]>,
+//   from: PeerId,
+//   timestamp: Instant,
+// }

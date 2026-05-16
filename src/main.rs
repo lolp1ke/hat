@@ -1,25 +1,22 @@
 use std::sync::Arc;
 
-use hat::{
-  app::{
-    App, AppContext as _, BackgroundExecutor, ForegroundExecutor,
-    KeyBindingsFile, WindowConfig,
-  },
-  args::Args,
-  state::CurrentPersona,
-  ui::Hat,
+use dene::{
+  App, AppContext as _,
+  executor::{BackgroundExecutor, ForegroundExecutor},
+  keybind::KeybindsFile,
+  ratatui::layout::Rect,
+  window::WindowConfig,
 };
-use ratatui::layout::Rect;
+use hat::{args::Args, state::CurrentPersona, ui::Hat};
 use tokio::sync::mpsc;
 
-// #[tokio::main(name = "main", flavor = "multi_thread")]
 fn main() -> anyhow::Result<()> {
   hat::utils::log::init_logger()?;
   let rt = tokio::runtime::Builder::new_multi_thread()
     .enable_all()
     .build()?;
 
-  let (width, height) = crossterm::terminal::size().unwrap();
+  let (width, height) = dene::ratatui::crossterm::terminal::size().unwrap();
   let terminal_area = Rect {
     x: 0,
     y: 0,
@@ -37,10 +34,8 @@ fn main() -> anyhow::Result<()> {
 
   rt.block_on(async {
     App::run(app.clone(), rx, move |cx| {
-      let keybindings = KeyBindingsFile::parse(
-        include_str!("../assets/default_keymap.toml"),
-        cx,
-      )?;
+      let keybindings =
+        KeybindsFile::parse(include_str!("../assets/default_keymap.toml"), cx)?;
       cx.load_keybinds(keybindings);
       cx.set_global(CurrentPersona::new(persona));
 
@@ -55,13 +50,12 @@ fn main() -> anyhow::Result<()> {
 
       anyhow::Ok(())
     })
-    .await?;
+    .await??;
 
     anyhow::Ok(())
   })?;
 
-  #[cfg(debug_assertions)]
-  tracing::info!("{:#?}", app);
+  tracing::debug!("{:#?}", app);
 
   Ok(())
 }

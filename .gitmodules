@@ -1,3 +1,6 @@
 [submodule "qalam"]
 	path = qalam
 	url = https://codeberg.org/lolp1ke/qalam.git
+[submodule "dene"]
+	path = dene
+	url = https://codeberg.org/lolp1ke/dene.git
