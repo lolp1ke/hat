@@ -4,10 +4,10 @@
   ],
   "rust-analyzer.check.targets": [
     "aarch64-apple-darwin",
-    "x86_64-unknown-linux-musl",
+    // "x86_64-unknown-linux-musl",
   ],
-  "rust-analyzer.cargo.target": "aarch64-apple-darwin",
-  "rust-analyzer.cargo.allTargets": false,
-  "rust-analyzer.check.allTargets": true,
+  // "rust-analyzer.cargo.target": "aarch64-apple-darwin",
+  // "rust-analyzer.cargo.allTargets": false,
+  // "rust-analyzer.check.allTargets": true,
   "rust-analyzer.check.command": "clippy",
 }

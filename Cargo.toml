@@ -29,7 +29,7 @@ required-features = ["default"]
 default = ["clap", "tokio", "tracing"]
 
 clap = ["clap/std", "clap/derive", "clap/help"]
-tokio = ["tokio/rt-multi-thread"]
+tokio = ["tokio/rt-multi-thread", "tokio/sync"]
 tracing = ["tracing-subscriber/fmt"]
 
 [badges]
@@ -51,7 +51,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 [workspace]
-members = ["dene", "qalam"]
+members = []
 resolver = "3"
 
 [workspace.dependencies]

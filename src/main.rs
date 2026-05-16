@@ -1,3 +1,9 @@
+mod args;
+mod hat;
+mod state;
+mod ui;
+mod utils;
+
 use std::sync::Arc;
 
 use dene::{
@@ -7,11 +13,12 @@ use dene::{
   ratatui::layout::Rect,
   window::WindowConfig,
 };
-use hat::{args::Args, state::CurrentPersona, ui::Hat};
 use tokio::sync::mpsc;
 
+use crate::{args::Args, hat::Hat, state::CurrentPersona};
+
 fn main() -> anyhow::Result<()> {
-  hat::utils::log::init_logger()?;
+  crate::utils::log::init_logger()?;
   let rt = tokio::runtime::Builder::new_multi_thread()
     .enable_all()
     .build()?;

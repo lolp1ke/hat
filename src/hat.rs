@@ -6,10 +6,13 @@ use dene::{
   view::{Interactive, Render},
   window::Window,
 };
+use qalam::{Qalam, multiaddr, utils::keypair::load_keypair_from};
+use tokio::sync::mpsc;
 
 use crate::{
   state::{CurrentPersona, CurrentTopic},
   ui::{Chat, Empty, InfoBlock, InputMessage},
+  utils,
 };
 
 #[derive(Debug)]
@@ -20,59 +23,28 @@ impl Hat {
     cx: &mut Context<Self>,
   ) -> anyhow::Result<Self> {
     let persona = cx.global::<CurrentPersona>().clone();
-
     let cfg_path = env::home_dir().expect("no home?").join(".config/hat");
     let identities_path = cfg_path.join("identities");
     if !cfg_path.exists() || !identities_path.exists() {
       std::fs::create_dir_all(&identities_path)?;
     };
+    let ident =
+      load_keypair_from(&identities_path, &utils::path::sanitize(&persona.0))?;
 
-    // let ident = {
-    //   let sanitized_persona = utils::path::sanitize(&persona.0);
-    //   let key_path = identities_path.join(format!("{}.key", sanitized_persona));
-    //   let pub_key_path =
-    //     identities_path.join(format!("{}.key.pub", sanitized_persona));
+    let (cmd_tx, cmd_rx) = mpsc::channel(64);
+    let (event_tx, event_rx) = mpsc::channel(64);
+    let listen_on = multiaddr!(Ip4([127, 0, 0, 1]), Tcp(32768u16));
+    let qalam = Qalam::new(cmd_rx, event_tx, ident, listen_on, None);
 
-    //   if key_path.exists() {
-    //     identity::Keypair::from_protobuf_encoding(&std::fs::read(key_path)?)?
-    //   } else {
-    //     let keypair = identity::Keypair::generate_ed25519();
-    //     std::fs::write(key_path, keypair.to_protobuf_encoding()?)?;
-    //     std::fs::write(pub_key_path, keypair.public().encode_protobuf())?;
-    //     keypair
-    //   }
-    // };
+    cx.spawn_on_background(async {
+      qalam.start().await;
+    })
+    .detach();
 
-    // let mut swarm = SwarmBuilder::with_existing_identity(ident)
-    //   .with_tokio()
-    //   .with_tcp(
-    //     tcp::Config::default(),
-    //     noise::Config::new,
-    //     yamux::Config::default,
-    //   )?
-    //   .with_behaviour(|key| {
-    //     let gossipsub_config = gossipsub::ConfigBuilder::default().build()?;
-    //     let gossipsub = gossipsub::Behaviour::new(
-    //       gossipsub::MessageAuthenticity::Signed(key.clone()),
-    //       gossipsub_config,
-    //     )?;
-
-    //     let mdns = mdns::Behaviour::new(
-    //       mdns::Config::default(),
-    //       key.public().to_peer_id(),
-    //     )?;
-
-    //     Ok(HatNetwork { gossipsub, mdns })
-    //   })?
-    //   .build();
-
-    // swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
     let global_topic = CurrentTopic::new("global".into());
     cx.set_global(global_topic.clone());
     // let global_topic = IdentTopic::new(&**global_topic);
     // swarm.behaviour_mut().gossipsub.subscribe(&global_topic)?;
-
-    // let (cmd_tx, mut cmd_rx) = mpsc::unbounded_channel();
 
     let info_block_id = window.next_pane_id();
     let info_block = cx.new_entity(|cx| InfoBlock::new(window, cx));
@@ -83,7 +55,7 @@ impl Hat {
     let chat_id = window.next_pane_id();
     let chat = cx.new_entity(|cx| Chat::new(window, cx));
 
-    let _chat = chat.clone();
+    // let _chat = chat.clone();
     // cx.spawn(async move |cx| {
     //   loop {
     //     tokio::select! {
