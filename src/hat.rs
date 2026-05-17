@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, sync::Arc};
 
 use dene::{
   AppContext, Context,
@@ -6,12 +6,14 @@ use dene::{
   view::{Interactive, Render},
   window::Window,
 };
-use qalam::{Qalam, multiaddr, utils::keypair::load_keypair_from};
+use qalam::{
+  Qalam, multiaddr, room::RoomId, utils::keypair::load_keypair_from,
+};
 use tokio::sync::mpsc;
 
 use crate::{
   state::{CurrentPersona, CurrentTopic},
-  ui::{Chat, Empty, InfoBlock, InputMessage},
+  ui::{Chat, Empty, InfoBlock, InputEvent, InputMessage},
   utils,
 };
 
@@ -31,10 +33,11 @@ impl Hat {
     let ident =
       load_keypair_from(&identities_path, &utils::path::sanitize(&persona.0))?;
 
-    let (cmd_tx, cmd_rx) = mpsc::channel(64);
-    let (event_tx, event_rx) = mpsc::channel(64);
-    let listen_on = multiaddr!(Ip4([127, 0, 0, 1]), Tcp(32768u16));
+    let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
+    let (event_tx, mut event_rx) = mpsc::channel(64);
+    let listen_on = multiaddr!(Ip4([0, 0, 0, 0]), Tcp(0u16));
     let qalam = Qalam::new(cmd_rx, event_tx, ident, listen_on, None);
+    let local_peer_id = qalam.local_peer_id();
 
     cx.spawn_on_background(async {
       qalam.start().await;
@@ -43,53 +46,63 @@ impl Hat {
 
     let global_topic = CurrentTopic::new("global".into());
     cx.set_global(global_topic.clone());
-    // let global_topic = IdentTopic::new(&**global_topic);
-    // swarm.behaviour_mut().gossipsub.subscribe(&global_topic)?;
+
+    if let Err(err) = cmd_tx.send(qalam::command::Command::JoinRoom {
+      name: global_topic.0.clone(),
+    }) {
+      tracing::warn!("failed to send command: {:?}\n{:?}", err.0, err);
+    };
 
     let info_block_id = window.next_pane_id();
     let info_block = cx.new_entity(|cx| InfoBlock::new(window, cx));
 
     let input_id = window.next_pane_id();
     let input = cx.new_entity(|cx| InputMessage::new(window, cx));
+    cx.subscribe(input.clone(), {
+      let cmd_tx = cmd_tx.clone();
+      move |_, event, cx| {
+        use qalam::command::Command;
+        let topic = cx.global::<CurrentTopic>().0.clone();
+
+        match event {
+          InputEvent::Submit { data } => {
+            if let Err(err) = cmd_tx.send(Command::SendRoomMessage {
+              room: RoomId::room(&topic),
+              from: local_peer_id,
+              message: data.clone(),
+            }) {
+              tracing::warn!("failed to send command: {:?}\n{:?}", err.0, err);
+            };
+          }
+        };
+      }
+    });
 
     let chat_id = window.next_pane_id();
     let chat = cx.new_entity(|cx| Chat::new(window, cx));
 
-    // let _chat = chat.clone();
-    // cx.spawn(async move |cx| {
-    //   loop {
-    //     tokio::select! {
-    //       Some(event) = swarm.next() => {
-    //         Self::handle_network_event(event, &mut swarm, &_chat, cx)?;
-    //       }
-    //       Some(cmd) = cmd_rx.recv() => {
-    //         if let Err(err) = Self::handle_network_command(cmd, &mut swarm) {
-    //           tracing::error!("cmd_rx error: {:?}", err);
-    //         };
-    //       }
+    cx.spawn({
+      let chat = chat.clone();
+      async move |cx| {
+        use qalam::event::Event;
 
-    //       else => break,
-    //     }
-    //   }
+        while let Some(event) = event_rx.recv().await {
+          match event {
+            Event::ChatMessageReceieved(msg) => {
+              cx.update_entity(&chat, |chat, cx| {
+                chat
+                  .messages
+                  .push((msg.from.to_string().into(), msg.content));
+              });
+            }
 
-    //   anyhow::Ok(())
-    // })
-    // .detach();
-
-    // cx.subscribe(input.clone(), move |_, event, cx| {
-    //   match event {
-    //     InputEvent::Submit { data } => {
-    //       let current_topic = cx.global::<CurrentTopic>();
-
-    //       if let Err(err) = cmd_tx.send(HatNetworkCommand::SendMessage {
-    //         topic: current_topic.0.clone(),
-    //         message: data.clone(),
-    //       }) {
-    //         tracing::error!("[Hat] InputEvent subscriber: {:#?}", err);
-    //       };
-    //     }
-    //   };
-    // });
+            Event::RoomLeft { room } => {}
+            _ => {}
+          };
+        }
+      }
+    })
+    .detach();
 
     let empty_ids = [
       window.next_pane_id(),

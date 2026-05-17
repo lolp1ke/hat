@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+  sync::Arc,
+  time::{Duration, Instant},
+};
 
 use dene::{
   Context, actions,
@@ -140,8 +143,9 @@ impl InputMessage {
     _: &mut Window,
     cx: &mut Context<Self>,
   ) {
+    let data = std::mem::take(&mut self.message);
     cx.emit(InputEvent::Submit {
-      data: self.message.join("\r\n").into_bytes(),
+      data: data.into_iter().map(|line| line.into()).collect(),
     });
 
     self.message.clear();
@@ -232,7 +236,7 @@ impl EventEmitter<InputEvent> for InputMessage {}
 
 #[derive(Debug)]
 pub enum InputEvent {
-  Submit { data: Vec<u8> },
+  Submit { data: Arc<[Arc<str>]> },
 }
 
 actions! {

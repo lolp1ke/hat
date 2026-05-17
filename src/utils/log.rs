@@ -21,7 +21,11 @@ pub fn init_logger() -> anyhow::Result<()> {
     .append(false)
     .open(format!("logs/{}.log", current_ts))?;
 
-  let targets_filter = filter::Targets::new().with_target("hat", Level::TRACE);
+  let targets_filter = filter::Targets::new().with_targets([
+    ("hat", Level::TRACE),
+    ("dene", Level::TRACE),
+    ("qalam", Level::TRACE),
+  ]);
   let layer = tracing_subscriber::fmt::layer()
     .with_ansi(false)
     .with_line_number(true)
