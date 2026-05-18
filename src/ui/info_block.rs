@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::sync::Arc;
 
 use dene::{
@@ -39,7 +41,7 @@ impl Render for InfoBlock {
       Line::raw(format!("persona: {}", self.persona)),
       Line::raw(format!(
         "time: {}",
-        strftime_local("%H:%M:%S %p", time_format::now().unwrap()).unwrap()
+        strftime_local("%I:%M:%S %p", time_format::now().unwrap()).unwrap()
       )),
     ]))
     .block(info_block);

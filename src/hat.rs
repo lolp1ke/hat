@@ -1,4 +1,6 @@
-use std::{env, sync::Arc};
+// SPDX-License-Identifier: Apache-2.0
+
+use std::env;
 
 use dene::{
   AppContext, Context,
@@ -12,9 +14,8 @@ use qalam::{
 use tokio::sync::mpsc;
 
 use crate::{
-  state::{CurrentPersona, CurrentTopic},
+  state::{AddressBook, CurrentPersona, CurrentTopic},
   ui::{Chat, Empty, InfoBlock, InputEvent, InputMessage},
-  utils,
 };
 
 #[derive(Debug)]
@@ -30,16 +31,23 @@ impl Hat {
     if !cfg_path.exists() || !identities_path.exists() {
       std::fs::create_dir_all(&identities_path)?;
     };
-    let ident =
-      load_keypair_from(&identities_path, &utils::path::sanitize(&persona.0))?;
+    let ident = load_keypair_from(&identities_path, &persona.0)?;
 
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let (event_tx, mut event_rx) = mpsc::channel(64);
     let listen_on = multiaddr!(Ip4([0, 0, 0, 0]), Tcp(0u16));
-    let qalam = Qalam::new(cmd_rx, event_tx, ident, listen_on, None);
+    let qalam =
+      Qalam::new(persona.0.clone(), cmd_rx, event_tx, ident, listen_on, None);
     let local_peer_id = qalam.local_peer_id();
+    tracing::debug!("Current local_peer_id: {:?}", local_peer_id.to_string());
 
-    cx.spawn_on_background(async {
+    let mut address_book =
+      AddressBook::try_load(&cfg_path.join("address_book.toml"))
+        .unwrap_or_default();
+    address_book.insert(local_peer_id.to_string(), persona.0, true);
+    cx.set_global(address_book);
+
+    cx.spawn_on_background(async move {
       qalam.start().await;
     })
     .detach();
@@ -47,7 +55,7 @@ impl Hat {
     let global_topic = CurrentTopic::new("global".into());
     cx.set_global(global_topic.clone());
 
-    if let Err(err) = cmd_tx.send(qalam::command::Command::JoinRoom {
+    if let Err(err) = cmd_tx.send(qalam::command::QalamCommand::JoinRoom {
       name: global_topic.0.clone(),
     }) {
       tracing::warn!("failed to send command: {:?}\n{:?}", err.0, err);
@@ -61,13 +69,14 @@ impl Hat {
     cx.subscribe(input.clone(), {
       let cmd_tx = cmd_tx.clone();
       move |_, event, cx| {
-        use qalam::command::Command;
+        use qalam::command::QalamCommand;
         let topic = cx.global::<CurrentTopic>().0.clone();
 
         match event {
           InputEvent::Submit { data } => {
-            if let Err(err) = cmd_tx.send(Command::SendRoomMessage {
-              room: RoomId::room(&topic),
+            let room = RoomId::room(&topic);
+            if let Err(err) = cmd_tx.send(QalamCommand::SendRoomMessage {
+              room,
               from: local_peer_id,
               message: data.clone(),
             }) {
@@ -79,24 +88,54 @@ impl Hat {
     });
 
     let chat_id = window.next_pane_id();
-    let chat = cx.new_entity(|cx| Chat::new(window, cx));
+    let chat = cx.new_entity(|cx| Chat::new(local_peer_id, window, cx));
 
     cx.spawn({
       let chat = chat.clone();
       async move |cx| {
-        use qalam::event::Event;
+        use qalam::event::QalamEvent;
 
         while let Some(event) = event_rx.recv().await {
           match event {
-            Event::ChatMessageReceieved(msg) => {
+            QalamEvent::RoomLeft { room } => {}
+            QalamEvent::ChatMessageReceieved { room, message } => {
+              let from = message.from;
               cx.update_entity(&chat, |chat, cx| {
-                chat
-                  .messages
-                  .push((msg.from.to_string().into(), msg.content));
+                chat.messages.entry(room).or_default().push(message);
               });
+
+              let peer_str = from.to_string().clone();
+              let known =
+                cx.read_global::<AddressBook, _, _>(|address_book, _| {
+                  address_book.persona_by_peer_id.contains_key(&*peer_str)
+                });
+
+              if !known {
+                tracing::warn!(
+                  "peer {} is not registed in address book.",
+                  peer_str
+                );
+
+                if let Err(err) =
+                  cmd_tx.send(qalam::command::QalamCommand::RequestPersona {
+                    peer: from,
+                  })
+                {
+                  tracing::warn!("failed to request persona: {:?}", err);
+                };
+              };
             }
 
-            Event::RoomLeft { room } => {}
+            QalamEvent::PersonaReceived { peer, persona } => {
+              let app = cx.app();
+              let mut app = app.borrow_mut();
+              let address_book = app.global_mut::<AddressBook>();
+              address_book.insert(peer.to_string(), persona, true);
+              // NOTE: just a reminder comment so i won't borrow [`cx`] while still having [`RefMut<'_, App>`]
+              //       in case i add more code below: "use [`app`] or drop it and use [`cx`]"
+              // drop(app);
+            }
+
             _ => {}
           };
         }
@@ -148,83 +187,6 @@ impl Hat {
 
     Ok(Self {})
   }
-
-  // fn handle_network_event(
-  //   event: SwarmEvent<HatNetworkEvent>,
-  //   swarm: &mut Swarm<HatNetwork>,
-  //   chat: &Entity<Chat>,
-  //   cx: &mut AsyncApp,
-  // ) -> anyhow::Result<()> {
-  //   let cx = cx.app();
-  //   let mut cx = cx.borrow_mut();
-
-  //   #[expect(clippy::single_match, reason = "")]
-  //   match event {
-  //     SwarmEvent::Behaviour(event) => match event {
-  //       HatNetworkEvent::Mdns(event) => match event {
-  //         mdns::Event::Discovered(peers) => {
-  //           for (peer_id, addr) in peers.into_iter() {
-  //             swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
-  //             swarm.add_external_address(addr.clone());
-  //             swarm.add_peer_address(peer_id, addr);
-  //           }
-  //         }
-  //         mdns::Event::Expired(peers) => {
-  //           for (peer_id, addr) in peers.into_iter() {
-  //             swarm
-  //               .behaviour_mut()
-  //               .gossipsub
-  //               .remove_explicit_peer(&peer_id);
-  //             swarm.remove_external_address(&addr);
-  //             swarm.disconnect_peer_id(peer_id).unwrap_or_else(|_| {
-  //               tracing::warn!("failed to disconnect {:?}", peer_id);
-  //             });
-  //           }
-  //         }
-  //       },
-  //       HatNetworkEvent::Gossipsub(event) => match event {
-  //         gossipsub::Event::Message {
-  //           propagation_source: _,
-  //           message_id,
-  //           message,
-  //         } => {
-  //           tracing::debug!("from id: {}; message: {:?}", message_id, message);
-
-  //           let text = String::from_utf8(message.data).unwrap_or_default();
-  //           let text = text.lines().map(Into::into).collect();
-
-  //           cx.update_entity(chat, |_, cx| {
-  //             cx.emit(ChatEvent::NewMessage {
-  //               topic: message.topic,
-  //               message: text,
-  //             });
-  //           });
-  //         }
-  //         _ => {}
-  //       },
-  //     },
-
-  //     _ => {}
-  //   };
-
-  //   Ok(())
-  // }
-
-  // fn handle_network_command(
-  //   cmd: HatNetworkCommand,
-  //   swarm: &mut Swarm<HatNetwork>,
-  // ) -> anyhow::Result<()> {
-  //   match cmd {
-  //     HatNetworkCommand::SendMessage { topic, message } => {
-  //       let topic = IdentTopic::new(&*topic);
-  //       swarm
-  //         .behaviour_mut()
-  //         .gossipsub
-  //         .publish(topic.hash(), message)?;
-  //     }
-  //   };
-  //   Ok(())
-  // }
 }
 impl Render for Hat {}
 impl Interactive for Hat {}

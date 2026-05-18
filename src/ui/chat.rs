@@ -1,4 +1,9 @@
-use std::sync::Arc;
+// SPDX-License-Identifier: Apache-2.0
+
+use std::{
+  collections::{BTreeMap, HashMap},
+  sync::Arc,
+};
 
 use dene::{
   Context,
@@ -13,18 +18,36 @@ use dene::{
   view::{Interactive, Render},
   window::Window,
 };
+use qalam::{
+  PeerId,
+  room::{ChatMessage, RoomId},
+};
 
-use crate::ui::InputEvent;
+use crate::{
+  state::{AddressBook, CurrentTopic},
+  ui::InputEvent,
+};
 
 #[derive(Debug)]
 pub struct Chat {
-  pub(crate) messages: Vec<(Arc<str>, Arc<[Arc<str>]>)>,
+  topic: Arc<str>,
+  pub(crate) messages: BTreeMap<RoomId, Vec<ChatMessage>>,
+  local_peer_id: PeerId,
 }
 impl Chat {
-  pub fn new(_: &mut Window, cx: &mut Context<Self>) -> Self {
+  pub fn new(
+    local_peer_id: PeerId,
+    _: &mut Window,
+    cx: &mut Context<Self>,
+  ) -> Self {
     Self {
-      messages: Vec::default(),
+      topic: cx.global::<CurrentTopic>().0.clone(),
+      messages: BTreeMap::default(),
+      local_peer_id,
     }
+  }
+  pub fn set_topic(&mut self, topic: Arc<str>) {
+    self.topic = topic;
   }
 }
 impl Render for Chat {
@@ -33,22 +56,52 @@ impl Render for Chat {
     frame: &mut Frame,
     area: Rect,
     _: &mut Window,
-    _: &mut Context<Self>,
+    cx: &mut Context<Self>,
   ) {
-    let chat_block = Block::new().borders(Borders::ALL).title("chat");
-    let inner = chat_block.inner(area);
+    let chat_block = Block::new()
+      .borders(Borders::ALL)
+      .title(Line::raw(format!("chat/{}", &*self.topic)).left_aligned());
 
+    let inner = chat_block.inner(area);
+    let topic = cx.global::<CurrentTopic>();
+    let room = RoomId::room(topic);
+
+    let _dummy = &Vec::new();
     let lines = self
       .messages
+      .get(&room)
+      .unwrap_or(_dummy)
       .iter()
-      .flat_map(|(sender, content)| {
-        let sender_line = Line::from(Span::styled(
-          &**sender,
-          Style::new().bold().fg(Color::Cyan),
-        ));
+      .flat_map(|msg| {
+        let is_me = msg.from == self.local_peer_id;
+        let from = msg.from.to_string();
 
-        let msg_lines =
-          content.iter().map(|line| Line::from(Span::raw(&**line)));
+        let address_book = cx.global::<AddressBook>();
+        let persona_ident = address_book.get(msg.from.to_string());
+        let peer_id_suffix = &from[from.len().saturating_sub(4)..];
+
+        let sender_style = if is_me {
+          Style::default().bold().fg(Color::Green)
+        } else {
+          Style::default().bold().fg(Color::Cyan)
+        };
+        let sender_line = Line::from(Span::styled(
+          format!(
+            "{}#{}: {}",
+            persona_ident.unwrap_or("?".into()),
+            peer_id_suffix,
+            time_format::strftime_local(
+              "%I:%M %p",
+              (msg.ts.as_millis() / 1000) as i64
+            )
+            .unwrap_or_default(),
+          ),
+          sender_style,
+        ));
+        let msg_lines = msg
+          .content
+          .iter()
+          .map(|line| Line::from(Span::raw(&**line)));
 
         std::iter::once(sender_line).chain(msg_lines)
       })

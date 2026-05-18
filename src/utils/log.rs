@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::{
   fs::OpenOptions,
   time::{SystemTime, UNIX_EPOCH},

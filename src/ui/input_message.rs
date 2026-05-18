@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::{
   sync::Arc,
   time::{Duration, Instant},
@@ -143,6 +145,14 @@ impl InputMessage {
     _: &mut Window,
     cx: &mut Context<Self>,
   ) {
+    // early return if empty
+    if self.message.len() <= 1
+      && let Some(msg) = self.message.first()
+      && msg.is_empty()
+    {
+      return;
+    };
+
     let data = std::mem::take(&mut self.message);
     cx.emit(InputEvent::Submit {
       data: data.into_iter().map(|line| line.into()).collect(),
