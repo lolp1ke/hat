@@ -42,6 +42,7 @@ impl InputMessage {
 
     Self {
       message: vec![String::default()],
+
       cursor_pos: (0, 0),
       cursor_visible: true,
       cursor_last_blink: Instant::now(),
@@ -218,9 +219,12 @@ impl Interactive for InputMessage {
   fn on_keystroke(
     &mut self,
     keystroke: Keystroke,
-    _: &mut Window,
-    _: &mut Context<Self>,
+    window: &mut Window,
+    cx: &mut Context<Self>,
   ) {
+    if !cx.focused(window) {
+      return;
+    };
     let Some(key_char) = keystroke.key_char else {
       return;
     };

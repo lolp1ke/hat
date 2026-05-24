@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-  collections::{BTreeMap, HashMap},
-  sync::Arc,
-};
+use std::{collections::BTreeMap, sync::Arc};
 
 use dene::{
   Context,
@@ -63,8 +60,7 @@ impl Render for Chat {
       .title(Line::raw(format!("chat/{}", &*self.topic)).left_aligned());
 
     let inner = chat_block.inner(area);
-    let topic = cx.global::<CurrentTopic>();
-    let room = RoomId::room(topic);
+    let room = RoomId::room(&self.topic);
 
     let _dummy = &Vec::new();
     let lines = self

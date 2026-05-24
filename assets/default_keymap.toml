@@ -3,6 +3,8 @@
 [[keybindings]]
 [keybindings.bindings]
 "ctrl-q" = "Quit"
+"tab" = "FocusNext"
+"shift-tab" = "FocusPrev"
 
 [[keybindings]]
 context = "input"

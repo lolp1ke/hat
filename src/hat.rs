@@ -183,7 +183,7 @@ impl Hat {
       ],
       weights: vec![5.0, 1.0],
     });
-    window.active_pane.replace(input_id);
+    window.active_panel.replace(input_id);
 
     Ok(Self {})
   }
