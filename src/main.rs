@@ -50,7 +50,7 @@ fn main() -> anyhow::Result<()> {
 
       let hat = cx.open_window(
         WindowConfig {
-          area: terminal_area,
+          bounds: terminal_area,
         },
         |window, cx| cx.new_entity(|cx| Hat::try_new(window, cx).unwrap()),
       );
